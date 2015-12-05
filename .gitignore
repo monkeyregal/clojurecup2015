@@ -1,0 +1,14 @@
+pom.xml
+*jar
+/lib/
+/classes/
+/out/
+/release/
+/target/
+.lein-deps-sum
+.lein-repl-history
+.lein-plugins/
+/playlist-viewer/.idea
+/playlist-viewer/out
+/playlist-viewer/target
+
