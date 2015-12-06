@@ -204,7 +204,7 @@
 
 (defn initialize-local-database []
   (let [storage (GnStorageSqlite/enable)]
-    (.storageLocation storage "/Users/erwin/Develop/monkeyregal/clojurecup2015/streamparser/data/cache/")
+    (.storageLocation storage "./data/cache/")
     (GnLookupLocal/enable)
     (GnLookupLocalStream/enable)))
 
