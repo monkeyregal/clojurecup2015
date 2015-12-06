@@ -23,7 +23,7 @@
                      {:current-playlist 0
                       :playlists
                         [ {
-                           :name "First Playlist"
+                           :name "My Jazz Favourites"
                            :created "2015-12-06"
                            :tracks [
                             {:name "Track 1"

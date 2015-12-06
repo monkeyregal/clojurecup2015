@@ -3,6 +3,7 @@
     [playlist-viewer.global :refer [app-state radio-stations]]
     [playlist-viewer.radio-views :refer [render-radio-stations]]))
 
+(def num-tracks 5)
 
 (defn play-sound []
   (.play
@@ -42,22 +43,33 @@
 
 
 (defn render-track [track]
-  [:div {:class "rm-track"}
-   [:div {:class "rm-track-name"} (:name track) ]
-   [:div {:class "rm-track-artist"} (:artist track)]
-   [:div {:class "rm-track-album"} (:album track)]
-   [:div {:class "media media-right"}
-    [:img {:class "media-object" :data-src "holder.js/64x64"}]]
+  [:div {:class "row rm-track"}
+   [:span {:class "col-md-6 rm-track-name"} (:name track) ]
+   [:span {:class "col-md-4 rm-track-artist"} (:artist track)
+    [:span {:class "rm-track-album"} (:album track)]]
+   [:span {:class "col-md-2"}
+    [:img {:data-src "holder.js/64x64"}]]
    ])
+
+(defn render-track-2 [track]
+  [:div {:class "media"}
+   [:div {:class "media-left"}
+    [:a {:href "#"}
+     [:img {:class "media-object" :data-src "holder.js/64x64" :alt "64x64"}]]]
+   [:div {:class "media-body"}
+    [:h4 {:class "media-heading"} (:name track)]
+    [:span {:class "rm-track-artist"} (:artist track)]
+    [:span {:class "rm-track-album"} (:album track)]]])
+
 
 
 (defn render-tracks [tracks]
-  (map #(render-track %) tracks))
+  (map #(render-track-2 %) tracks))
 
 
 (defn render-playlist-item [item]
-  [:div {:class "rm-playlist-name"} (str (:name item) " ... Currently Playing")
-   (render-tracks (:tracks item))])
+  [:div {:class "rm-playlist-name"} (str "Current playlist: "  (:name item))
+   (render-tracks (take num-tracks (:tracks item)) )])
 
 
 (defn render-playlist []
