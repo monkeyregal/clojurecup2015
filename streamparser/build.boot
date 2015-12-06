@@ -5,6 +5,11 @@
                  [me.raynes/conch "0.8.0"]
                  [byte-streams "0.2.0"]
 
+                 [environ "1.0.1"]
+                 [boot-environ "1.0.1"]
+                 [gnsdk "3.07.7"]
+                 [gnsdk/gnsdk-helpers "3.07.7"]
+
                  [org.clojure/core.async "0.2.374"]
                  [ring/ring-core "1.4.0"]
                  [compojure "1.4.0"]
@@ -22,6 +27,7 @@
 
                  [org.apache.commons/commons-daemon "1.0.9"]])
 
+(require '[environ.boot :refer [environ]])
+(require '[environ.core :refer [env]])
 (require '[boot.pod :as pod])
-(pod/add-classpath (System/getenv "GNSDK_JAR"))
 (require '[streamparser])
