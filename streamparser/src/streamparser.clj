@@ -160,7 +160,7 @@
 
 (defn -main [& args]
   (println (System/getProperty "java.library.path"))
-  (System/loadLibrary "gnsdk_java_marshal")
+  (clojure.lang.RT/loadLibrary "gnsdk_java_marshal")
   (GnManager. gnsdk-lib client-license GnLicenseInputMode/kLicenseInputModeString)
   (let [user (user! (user-store))]
     (stream-music "http://icecast.omroep.nl/3fm-bb-mp3" user)))
