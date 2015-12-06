@@ -4,7 +4,8 @@
             [me.raynes.conch.low-level :as sh]
             [clojure.core.async :refer [chan go go-loop <! <!! >! >!! sliding-buffer timeout thread]]
             [clojure.tools.logging :as log]
-            [server])
+            [server]
+            [spotify])
   (:import  [java.util Iterator])
   (:import  [java.nio ByteBuffer])
   (:import  [com.gracenote.gnsdk
@@ -53,7 +54,7 @@
 
 (defn ffmpeg-stream [url]
   (assoc
-   (sh/proc "ffmpeg" "-i" url "-f" "wav" "-ar" "44100" "-t" "3600" "pipe:")
+   (sh/proc "ffmpeg" "-i" url "-f" "wav" "-ar" "44100" "pipe:")
    :url url))
 
 (defn push-onto-stream [c logger ffmpeg-process]
@@ -83,12 +84,24 @@
     (when (not= song last)
       (swap! last-songs (fn [prev] (assoc prev lookup song))))))
 
+(def playlist {:3fm "0Dk9ouTKwXzGpqkjVavDRl"
+               :sky "23xdXOfVgdQlDDc895COGM"
+               :all "0zENxOQG6nXtN0ZYfud7FW"})
+
+(def owner "monkeyregal")
+
 (defn handle-song-channel [c]
   (thread
     (loop []
       (let [msg (<!! c)]
         (when (emit-song?! msg)
-          (swap! server/last-100-songs (fn [prev] (-> prev (conj msg) (#(take 100 %))))))
+          (try
+            (swap! server/last-100-songs (fn [prev] (-> prev (conj msg) (#(take 100 %)))))
+            (spotify/add-song owner (playlist (:stream-id msg)) (:artist msg) (:track msg))
+            (spotify/trim-playlist owner (playlist (:stream-id msg)) 250)
+            (spotify/add-song owner (playlist :all) (:artist msg) (:track msg))
+            (spotify/trim-playlist owner (playlist :all) 250)
+            (catch Exception e (log/error e))))
         (recur)))))
 
 (defn log-stream-error [c]

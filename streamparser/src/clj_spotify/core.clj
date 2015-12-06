@@ -2,9 +2,7 @@
   (:require [clj-http.client :as client]
             [clojure.data.json :as json]
             [clojure.string :as string]
-            [cheshire.core :as js]
-            )
-  )
+            [cheshire.core :as js]))
 
 (def template-keys [:id :category_id :owner_id :playlist_id :user_id])
 

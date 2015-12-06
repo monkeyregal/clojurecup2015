@@ -19,6 +19,8 @@
 
                  [org.clojure/core.async "0.2.374"]
 
+                 [org.clojure/data.json "0.2.6"]
+                 [org.clojure/data.codec "0.1.0"]
                  [clj-time "0.11.0"]
                  [cheshire "5.5.0"]
                  [clj-http "2.0.0"]]
