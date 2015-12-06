@@ -17,8 +17,47 @@
     width: 35px;
     position: relative;
     margin-right: 5px;
+    border: 1px solid grey;
 }
 
 .rm-badge-spacer {
     margin-left: 5px;
+}
+
+.rm-track {
+    border: solid 1px gainsboro;
+    margin-bottom: 3px;
+    border-radius: 5px;
+}
+
+.rm-track-name {
+    font-weight: bold;
+}
+
+.rm-track-artist  {
+    font-size: smaller;
+}
+
+.rm-track-album {
+    font-size: smaller;
+}
+
+.rm-playlist-name {
+    font-size: larger;
+    margin-bottom: 5px;
+}
+
+.rm-station-heading {
+    font-weight: bold;
+    font-style: italic;
+}
+
+.rm-station-name {
+    font-style: normal;
+    font-weight: normal;
+    margin-bottom: 10px;
+}
+
+.rm-spotify-link {
+ font-size: smaller;
 }

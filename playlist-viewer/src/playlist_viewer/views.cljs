@@ -1,6 +1,7 @@
 (ns playlist-viewer.views
   (:require
-    [playlist-viewer.global :refer [app-state]]))
+    [playlist-viewer.global :refer [app-state radio-stations]]
+    [playlist-viewer.radio-views :refer [render-radio-stations]]))
 
 
 (defn play-sound []
@@ -13,19 +14,21 @@
 
 (defn add-track [])
 
+
 (defn navbar []
   [:nav {:class "navbar navbar-default"}
    [:a {:class "navbar-brand" :href "#" } "Regal Monkey" ]
-   [:button {:class "btn btn-info btn-navbar"
-             :on-click #(add-stream)
-             } "+ Stream"]
-   [:button {:class "btn btn-info btn-navbar"
-             :on-click #(add-track)
-             } "+ Track"]
+   ;[:button {:class "btn btn-info btn-navbar"
+   ;          :on-click #(add-stream)
+   ;          } "+ Stream"]
+   ;[:button {:class "btn btn-info btn-navbar"
+   ;          :on-click #(add-track)
+   ;          } "+ Track"]
    [:img {:class "navbar-right rm-nav-image"
           :on-click #(play-sound)
           :src "sfx/Monkey-37-277x300.jpg"}]
    ])
+
 
 (defn render-playlist-line [item]
   [:div {:class ""} (:name item)
@@ -39,17 +42,21 @@
 
 
 (defn render-track [track]
-  [:div {:class ""}
-   [:div {:class ""} (:name track)]
-   [:div {:class ""} (:artist track)]
-   [:div {:class ""} (:album track)]])
+  [:div {:class "rm-track"}
+   [:div {:class "rm-track-name"} (:name track) ]
+   [:div {:class "rm-track-artist"} (:artist track)]
+   [:div {:class "rm-track-album"} (:album track)]
+   [:div {:class "media media-right"}
+    [:img {:class "media-object" :data-src "holder.js/64x64"}]]
+   ])
+
 
 (defn render-tracks [tracks]
   (map #(render-track %) tracks))
 
 
 (defn render-playlist-item [item]
-  [:div {:class ""} (:name item)
+  [:div {:class "rm-playlist-name"} (str (:name item) " ... Currently Playing")
    (render-tracks (:tracks item))])
 
 
@@ -65,5 +72,5 @@
      [:div (navbar)]
      [:div {:class "row"}
       [:div {:id "left" :class "col-md-9"} (render-playlist)]
-      [:div {:id "right" :class "col-md-3"} (render-all-playlists)]]])
+      [:div {:id "right" :class "col-md-3"} (render-radio-stations @radio-stations)]]])
 
