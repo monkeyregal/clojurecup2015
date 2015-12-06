@@ -3,7 +3,8 @@
             [me.raynes.conch :as c]
             [me.raynes.conch.low-level :as sh]
             [clojure.core.async :refer [chan go go-loop <! <!! >! >!! sliding-buffer timeout thread]]
-            [clojure.tools.logging :as log])
+            [clojure.tools.logging :as log]
+            [server])
   (:import  [java.util Iterator])
   (:import  [java.nio ByteBuffer])
   (:import  [com.gracenote.gnsdk
@@ -55,7 +56,7 @@
    (sh/proc "ffmpeg" "-i" url "-f" "wav" "-ar" "44100" "-t" "3600" "pipe:")
    :url url))
 
-(defn push-onto-stream [c ffmpeg-process]
+(defn push-onto-stream [c logger ffmpeg-process]
   (thread (loop []
             (let [data-size 10584000 ;; 60 seconds of 44100 16-bit stereo
                   from (:out ffmpeg-process)
@@ -66,10 +67,29 @@
                   (if (>= new-total data-size)
                     (>!! c {:bytes bytes
                             :read  (min data-size new-total)
-                            :url   (:url ffmpeg-process)})
+                            :url   (:url ffmpeg-process)
+                            :logger logger})
                     (recur new-total)))))
             (log/debug "delivered 60 seconds for: " (:url ffmpeg-process))
             (recur))))
+
+(def last-songs (atom {:3fm nil
+                       :sky nil}))
+
+(defn emit-song?! [msg]
+  (let [lookup (:stream-id msg)
+        last   (lookup @last-songs)
+        song   (select-keys msg [:artist :track])]
+    (when (not= song last)
+      (swap! last-songs (fn [prev] (assoc prev lookup song))))))
+
+(defn handle-song-channel [c]
+  (thread
+    (loop []
+      (let [msg (<!! c)]
+        (when (emit-song?! msg)
+          (swap! server/last-100-songs (fn [prev] (-> prev (conj msg) (#(take 100 %))))))
+        (recur)))))
 
 (defn log-stream-error [c]
   (thread (loop []
@@ -124,17 +144,18 @@
 
 (def next-timeout (atom 7000))
 
-(defn handle-result [result url]
+(defn handle-result [result stream-id]
   (let [albums (-> (.. result (albums) (getIterator))
                    (gn-iterator->iterator-seq))
         result (-> (map convert-result albums)
                    doall
                    first)
-        result (assoc result :url url)]
+        result (if result (assoc result :stream-id stream-id) result)]
     (log/warn result)
-    (>!! song-channel result)))
+    (when result
+      (>!! song-channel result))))
 
-(defn make-logger [url] (reify
+(defn make-logger [stream-id] (reify
                        IGnMusicIdStreamEvents
                        (musicIdStreamProcessingStatusEvent [_ status _]
                          ;; (println status)
@@ -144,16 +165,17 @@
                          (if (= status GnMusicIdStreamIdentifyingStatus/kStatusIdentifyingEnded)
                            (.setCancel c true)))
                        (musicIdStreamAlbumResult [_ result _]
-                         (handle-result result url))
+                         (handle-result result stream-id))
                        (musicIdStreamIdentifyCompletedWithError [_ error]
                          (log/error (.errorAPI error) "\t" (.errorCode error) "\t" (.errorDescription error)))
                        (statusEvent [_ status percent _ _ _]
                             ;; (println percent)
                          )))
 
-(defn stream-music1 [c user logger]
+(defn stream-music1 [c user]
   (thread (try (loop []
                  (let [msg (<!! c)
+                       logger (:logger msg)
                        mids (GnMusicIdStream. user GnMusicIdStreamPreset/kPresetRadio logger)]
                    (.. mids (options) (resultSingle true))
                    (.. mids (options) (lookupData GnLookupData/kLookupDataExternalIds true))
@@ -228,8 +250,9 @@
   (clojure.lang.RT/loadLibrary "gnsdk_java_marshal")
   (GnManager. gnsdk-lib client-license GnLicenseInputMode/kLicenseInputModeString)
   (initialize-local-database)
-  (let [user (user! (user-store))
-        logger (make-logger "N/A")]
-    (push-onto-stream seven-seconds-chan (ffmpeg-stream "http://8623.live.streamtheworld.com/SKYRADIOAAC_SC"))
-    (push-onto-stream seven-seconds-chan (ffmpeg-stream "http://icecast.omroep.nl/3fm-bb-mp3"))
-    (log/spyf :error "exited: %s" (<!! (stream-music1 seven-seconds-chan user logger)))))
+  (let [user (user! (user-store))]
+    (server/run)
+    (handle-song-channel song-channel)
+    (push-onto-stream seven-seconds-chan (make-logger :sky) (ffmpeg-stream "http://8623.live.streamtheworld.com/SKYRADIOAAC_SC"))
+    (push-onto-stream seven-seconds-chan (make-logger :3fm) (ffmpeg-stream "http://icecast.omroep.nl/3fm-bb-mp3"))
+    (log/spyf :error "exited: %s" (<!! (stream-music1 seven-seconds-chan user)))))
