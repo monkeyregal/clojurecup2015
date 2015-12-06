@@ -8,6 +8,8 @@ pom.xml
 .lein-deps-sum
 .lein-repl-history
 .lein-plugins/
+.nrepl-history
+.nrepl-port
 /playlist-viewer/.idea
 /playlist-viewer/out
 /playlist-viewer/target
