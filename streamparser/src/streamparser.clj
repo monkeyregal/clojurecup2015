@@ -59,7 +59,7 @@
         (.put data-buffer bytes 0 read))
       (max read 0))))
 
-(defn album-iterator->iterator-seq [albums]
+(defn gn-iterator->iterator-seq [albums]
   (iterator-seq
    (reify java.util.Iterator
      (hasNext [_]
@@ -68,16 +68,24 @@
        (.next albums))
      (remove [_]))))
 
+(defn ext-id->map [ext-id]
+  {:source  (.source ext-id)
+   :type    (.type   ext-id)
+   :value   (.value  ext-id)})
+
 (defn display [album]
   (let [artist (.. album (artist) (name) (display))
-        track  (.. album (trackMatched) (title) (display))]
-    [artist track]))
+        track  (.. album (trackMatched) (title) (display))
+        ext-ids (-> (.. album (trackMatched) (externalIds) (getIterator))
+                    (gn-iterator->iterator-seq))]
+    {:artist artist :track track :ext-ids (into [] (map ext-id->map ext-ids))}))
 
 (defn handle-result [result]
   (let [albums (-> (.. result (albums) (getIterator))
-                   (album-iterator->iterator-seq))]
+                   (gn-iterator->iterator-seq))]
     (-> (map display albums)
         doall
+        first
         println)))
 
 (defn make-logger [] (reify
