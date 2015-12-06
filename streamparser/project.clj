@@ -7,6 +7,7 @@
                  [ring/ring-jetty-adapter "1.4.0"]
                  [compojure "1.4.0"]
                  [ring/ring-devel "1.4.0"]
+                 [ring/ring-json "0.4.0"]
 
                  [me.raynes/conch "0.8.0"]
                  [byte-streams "0.2.0"]
