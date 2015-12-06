@@ -1,0 +1,24 @@
+/* some style */
+
+
+.navbar {
+    margin-top: 5px;
+}
+
+.btn-navbar {
+    top: 7px;
+    position: relative;
+    margin-right: 5px;
+}
+
+.rm-nav-image {
+    top: 6px;
+    left: -23px;
+    width: 35px;
+    position: relative;
+    margin-right: 5px;
+}
+
+.rm-badge-spacer {
+    margin-left: 5px;
+}

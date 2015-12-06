@@ -1,21 +1,25 @@
 (ns playlist-viewer.core
-  (:require [clojure.browser.repl :as repl]))
-
-;; (defonce conn
-;;   (repl/connect "http://localhost:9000/repl"))
+  (:require
+    [reagent.core :as reagent :refer [atom]]
+    [playlist-viewer.global :refer [app-state]]
+    [playlist-viewer.views :refer [container render-playlist render-all-playlists]]))
 
 (enable-console-print!)
+(println "Edits to this text should show up in your developer console.")
+
+;; define your app data so that it doesn't get over-written on reload
 
 
-(def *current-playlist* (atom nil) )
+(defn hello-world []
+  [:h1 (:text @app-state)])
 
-(def all-playlists [
-     {:name ""
-      :tracks [
-               {:artist "" :album "" :title "" :filename "" :running-time "" }
-               {:artist "" :album "" :title "" :filename "" :running-time "" }
-               ]}
-     {:name "" :tracks 2}
-  ])
 
-(println "Hello world!")
+(reagent/render-component [container]
+                          (. js/document (getElementById "app")))
+
+
+(defn on-js-reload []
+  ;; optionally touch your app-state to force rerendering depending on
+  ;; your application
+  ;; (swap! app-state update-in [:__figwheel_counter] inc)
+)
