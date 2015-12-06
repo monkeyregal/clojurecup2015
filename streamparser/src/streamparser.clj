@@ -53,6 +53,7 @@
 (def song-channel (chan (sliding-buffer 1000)))
 
 (defn ffmpeg-stream [url]
+  (log/warn "start-stream" url)
   (assoc
    (sh/proc "ffmpeg" "-i" url "-f" "wav" "-ar" "44100" "pipe:")
    :url url))
@@ -70,9 +71,12 @@
                             :read  (min data-size new-total)
                             :url   (:url ffmpeg-process)
                             :logger logger})
-                    (recur new-total)))))
+                    (if (> read -1)
+                      (recur new-total)
+                      (log/warn "stream-closed" (:url ffmpeg-process)))))))
             (log/debug "delivered 60 seconds for: " (:url ffmpeg-process))
-            (recur))))
+            (when (< 0 (.available (:out ffmpeg-process)))
+              (recur)))))
 
 (def last-songs (atom {:3fm nil
                        :sky nil}))
@@ -266,6 +270,10 @@
   (let [user (user! (user-store))]
     (server/run)
     (handle-song-channel song-channel)
-    (push-onto-stream seven-seconds-chan (make-logger :sky) (ffmpeg-stream "http://8623.live.streamtheworld.com/SKYRADIOAAC_SC"))
-    (push-onto-stream seven-seconds-chan (make-logger :3fm) (ffmpeg-stream "http://icecast.omroep.nl/3fm-bb-mp3"))
+    (go-loop []
+      (<! (push-onto-stream seven-seconds-chan (make-logger :sky) (ffmpeg-stream "http://8623.live.streamtheworld.com/SKYRADIOAAC_SC")))
+      (recur))
+    (go-loop []
+      (<! (push-onto-stream seven-seconds-chan (make-logger :3fm) (ffmpeg-stream "http://icecast.omroep.nl/3fm-bb-mp3")))
+      (recur))
     (log/spyf :error "exited: %s" (<!! (stream-music1 seven-seconds-chan user)))))
