@@ -2,7 +2,8 @@
   (:require [environ.core :refer [env]]
             [me.raynes.conch :as c]
             [me.raynes.conch.low-level :as sh]
-            [clojure.core.async :refer [chan go go-loop <! <!! >! >!! sliding-buffer timeout thread]])
+            [clojure.core.async :refer [chan go go-loop <! <!! >! >!! sliding-buffer timeout thread]]
+            [clojure.tools.logging :as log])
   (:import  [java.util Iterator])
   (:import  [java.nio ByteBuffer])
   (:import  [com.gracenote.gnsdk
@@ -54,9 +55,9 @@
    (sh/proc "ffmpeg" "-i" url "-f" "wav" "-ar" "44100" "-t" "3600" "pipe:")
    :url url))
 
-(defn take-from-stream [c ffmpeg-process]
+(defn push-onto-stream [c ffmpeg-process]
   (thread (loop []
-            (let [data-size 1234800
+            (let [data-size 10584000 ;; 60 seconds of 44100 16-bit stereo
                   from (:out ffmpeg-process)
                   bytes (byte-array data-size)]
               (loop [total 0]
@@ -67,8 +68,14 @@
                             :read  (min data-size new-total)
                             :url   (:url ffmpeg-process)})
                     (recur new-total)))))
-            (println "@@@ delivered 7 seconds for: " (:url ffmpeg-process))
+            (log/debug "delivered 60 seconds for: " (:url ffmpeg-process))
             (recur))))
+
+(defn log-stream-error [c]
+  (thread (loop []
+            (let [msg (<!! c)]
+              (log/error "STREAM:" (:url msg) " MSG:" msg)
+              (recur)))))
 
 (deftype AudioSource [ffmpeg-process]
   IGnAudioSource
@@ -117,34 +124,31 @@
 
 (def next-timeout (atom 7000))
 
-(defn handle-result [result]
+(defn handle-result [result url]
   (let [albums (-> (.. result (albums) (getIterator))
                    (gn-iterator->iterator-seq))
         result (-> (map convert-result albums)
                    doall
-                   first)]
-    (swap! next-timeout (fn [_] 7000;; (max 30000
-                                ;;     (- (:track-duration result 0)
-                                ;;        (:match-position result 0)))
-                          ))
-    (println result)))
+                   first)
+        result (assoc result :url url)]
+    (log/warn result)
+    (>!! song-channel result)))
 
-(defn make-logger [] (reify
+(defn make-logger [url] (reify
                        IGnMusicIdStreamEvents
                        (musicIdStreamProcessingStatusEvent [_ status _]
                          ;; (println status)
                          )
                        (musicIdStreamIdentifyingStatusEvent [_ status c]
-                         (println ">>> " status)
+                         (log/debug "status event:\t" status)
                          (if (= status GnMusicIdStreamIdentifyingStatus/kStatusIdentifyingEnded)
                            (.setCancel c true)))
                        (musicIdStreamAlbumResult [_ result _]
-                         (handle-result result))
+                         (handle-result result url))
                        (musicIdStreamIdentifyCompletedWithError [_ error]
-                         ;; (println error)
-                         )
-                       (statusEvent [_ _ percent _ _ _]
-                         ;; (println percent)
+                         (log/error (.errorAPI error) "\t" (.errorCode error) "\t" (.errorDescription error)))
+                       (statusEvent [_ status percent _ _ _]
+                            ;; (println percent)
                          )))
 
 (defn stream-music1 [c user logger]
@@ -164,7 +168,7 @@
                (catch Exception e e))))
 
 (defn stream-music [uri user]
-  (let [mids (GnMusicIdStream. user GnMusicIdStreamPreset/kPresetRadio (make-logger))]
+  (let [mids (GnMusicIdStream. user GnMusicIdStreamPreset/kPresetRadio (make-logger "N/A"))]
     (.. mids (options) (resultSingle true))
     (.. mids (options) (lookupData GnLookupData/kLookupDataExternalIds true))
     (.. mids (options) (lookupData GnLookupData/kLookupDataGlobalIds true))
@@ -174,7 +178,7 @@
       (let [nt @next-timeout]
         (swap! next-timeout (fn [_] nil))
         (<! (timeout (if (= nil nt) 7000 nt))))
-      (println "call identify")
+      (log/debug "identifying")
       (.identifyCancel mids)
       (.identifyAlbum mids)
       (recur))
@@ -208,14 +212,24 @@
     (GnLookupLocal/enable)
     (GnLookupLocalStream/enable)))
 
+(def config {:sky {:url "http://8623.live.streamtheworld.com/SKYRADIOAAC_SC"
+                   :client-id ""
+                   :client-tag ""
+                   :client-license ""}
+             :3fm {:url "http://icecast.omroep.nl/3fm-bb-mp3"
+                   :client-id ""
+                   :client-tag ""
+                   :client-license ""}})
+
+(defn merge-config [])
+
 (defn -main [& args]
-  (println (System/getProperty "java.library.path"))
+  (log/error "java.library.path=" (System/getProperty "java.library.path"))
   (clojure.lang.RT/loadLibrary "gnsdk_java_marshal")
   (GnManager. gnsdk-lib client-license GnLicenseInputMode/kLicenseInputModeString)
   (initialize-local-database)
   (let [user (user! (user-store))
-        logger (make-logger)]
-    (take-from-stream seven-seconds-chan (ffmpeg-stream "http://8623.live.streamtheworld.com/SKYRADIOAAC_SC"))
-    (take-from-stream seven-seconds-chan (ffmpeg-stream "http://icecast.omroep.nl/3fm-bb-mp3"))
-    (println (<!! (stream-music1 seven-seconds-chan user logger)))
-    ))
+        logger (make-logger "N/A")]
+    (push-onto-stream seven-seconds-chan (ffmpeg-stream "http://8623.live.streamtheworld.com/SKYRADIOAAC_SC"))
+    (push-onto-stream seven-seconds-chan (ffmpeg-stream "http://icecast.omroep.nl/3fm-bb-mp3"))
+    (log/spyf :error "exited: %s" (<!! (stream-music1 seven-seconds-chan user logger)))))
