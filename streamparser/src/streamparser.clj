@@ -74,20 +74,34 @@
    :type    (.type   ext-id)
    :value   (.value  ext-id)})
 
-(defn display [album]
-  (let [artist (.. album (artist) (name) (display))
-        track  (.. album (trackMatched) (title) (display))
-        ext-ids (-> (.. album (trackMatched) (externalIds) (getIterator))
-                    (gn-iterator->iterator-seq))]
-    {:artist artist :track track :ext-ids (into [] (map ext-id->map ext-ids))}))
+(defn convert-result [album]
+  (let [artist-display (.. album (artist) (name) (display))
+        track-matched  (.. album (trackMatched))
+        track-display  (.. track-matched (title) (display))
+        track-duration (.. track-matched (duration))
+        match-position (.. track-matched (matchPosition))
+        match-duration (.. track-matched (matchDuration))
+        ext-ids        (-> (.. track-matched (externalIds) (getIterator))
+                           (gn-iterator->iterator-seq))]
+    {:artist artist-display
+     :track track-display
+     :track-duration track-duration
+     :match-position match-position
+     :match-duration match-duration
+     :ext-ids (into [] (map ext-id->map ext-ids))}))
+
+(def next-timeout (atom 7000))
 
 (defn handle-result [result]
   (let [albums (-> (.. result (albums) (getIterator))
-                   (gn-iterator->iterator-seq))]
-    (-> (map display albums)
-        doall
-        first
-        println)))
+                   (gn-iterator->iterator-seq))
+        result (-> (map convert-result albums)
+                   doall
+                   first)]
+    (swap! next-timeout (fn [_] (max 30000
+                                    (- (:track-duration result 0)
+                                       (:match-position result 0)))))
+    (println result)))
 
 (defn make-logger [] (reify
                        IGnMusicIdStreamEvents
@@ -112,10 +126,12 @@
     (.. mids (options) (lookupData GnLookupData/kLookupDataExternalIds true))
     (.. mids (options) (lookupData GnLookupData/kLookupDataGlobalIds true))
     (doto mids
-      (.automaticIdentifcation true))
+      (.automaticIdentifcation false))
     (go-loop []
-      (<! (timeout 7000))
-      ;; (println "call identify")
+      (let [nt @next-timeout]
+        (swap! next-timeout (fn [_] nil))
+        (<! (timeout (if (= nil nt) 30000 nt))))
+      (println "call identify")
       (.identifyAlbum mids)
       (recur))
     (.audioProcessStart mids (AudioSource. (ffmpeg-stream uri)))))
