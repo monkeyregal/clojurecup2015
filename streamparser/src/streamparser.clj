@@ -26,7 +26,10 @@
              GnMusicIdStream
              GnMusicIdStreamPreset
              GnAlbumIterator
-             GnMusicIdStreamIdentifyingStatus])
+             GnMusicIdStreamIdentifyingStatus
+             GnStorageSqlite
+             GnLookupLocal
+             GnLookupLocalStream])
   (:gen-class))
 
 ;; TODO
@@ -98,9 +101,10 @@
         result (-> (map convert-result albums)
                    doall
                    first)]
-    (swap! next-timeout (fn [_] (max 30000
-                                    (- (:track-duration result 0)
-                                       (:match-position result 0)))))
+    (swap! next-timeout (fn [_] 7000;; (max 30000
+                                ;;     (- (:track-duration result 0)
+                                ;;        (:match-position result 0)))
+                          ))
     (println result)))
 
 (defn make-logger [] (reify
@@ -109,6 +113,7 @@
                          ;; (println status)
                          )
                        (musicIdStreamIdentifyingStatusEvent [_ status c]
+                         (println ">>> " status)
                          (if (= status GnMusicIdStreamIdentifyingStatus/kStatusIdentifyingEnded)
                            (.setCancel c true)))
                        (musicIdStreamAlbumResult [_ result _]
@@ -130,7 +135,7 @@
     (go-loop []
       (let [nt @next-timeout]
         (swap! next-timeout (fn [_] nil))
-        (<! (timeout (if (= nil nt) 30000 nt))))
+        (<! (timeout (if (= nil nt) 7000 nt))))
       (println "call identify")
       (.identifyAlbum mids)
       (recur))
@@ -154,13 +159,20 @@
                     true)))
 
 (defn user! [user-store] (let [user (com.gracenote.gnsdk.GnUser. user-store client-id client-tag VERSION)]
-             (.. user (options) (lookupMode com.gracenote.gnsdk.GnLookupMode/kLookupModeOnline))
+                           (.. user (options) (lookupMode com.gracenote.gnsdk.GnLookupMode/kLookupModeOnline ))
              (load-locale user)
              user))
+
+(defn initialize-local-database []
+  (let [storage (GnStorageSqlite/enable)]
+    (.storageLocation storage "/Users/erwin/Develop/monkeyregal/clojurecup2015/streamparser/data/cache/")
+    (GnLookupLocal/enable)
+    (GnLookupLocalStream/enable)))
 
 (defn -main [& args]
   (println (System/getProperty "java.library.path"))
   (clojure.lang.RT/loadLibrary "gnsdk_java_marshal")
   (GnManager. gnsdk-lib client-license GnLicenseInputMode/kLicenseInputModeString)
+  (initialize-local-database)
   (let [user (user! (user-store))]
     (stream-music "http://icecast.omroep.nl/3fm-bb-mp3" user)))
