@@ -5,18 +5,15 @@
 
 (defonce radio-stations
          (atom [
-                {:name "3fm"
+                {:name "3FM"
                  :lists [
-                         {:name "Last hour" :url ""}
-                         {:name "Last day" :url ""} ]}
-                {:name "Omroep Brabant"
-                 :lists [
-                        {:name "Last hour" :url ""}
-                        {:name "Last day" :url ""} ]}
+                         {:name "Last 250" :url "https://play.spotify.com/user/monkeyregal/playlist/0Dk9ouTKwXzGpqkjVavDRl"}]}
                 {:name "Sky Radio"
                  :lists [
-                         {:name "Last hour" :url ""}
-                         {:name "Last day" :url ""} ]}
+                         {:name "Last 250" :url "https://play.spotify.com/user/monkeyregal/playlist/23xdXOfVgdQlDDc895COGM"} ]}
+                {:name "NL"
+                 :lists [
+                         {:name "Last 250" :url "https://play.spotify.com/user/monkeyregal/playlist/0zENxOQG6nXtN0ZYfud7FW"} ]}
                 ]))
 
 (defonce app-state (atom

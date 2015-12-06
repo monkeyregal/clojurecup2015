@@ -6,7 +6,7 @@
 
 (defn- render-list-item [list-item]
        [:div {:class "rm-spotify-link"}
-        [:a {:class "" :href (:url list-item)} (:name list-item)]])
+        [:a {:class "" :target "_blank" :href (:url list-item)} (:name list-item)]])
 
 
 (defn- render-station [station]
@@ -24,7 +24,5 @@
 
 (defn render-radio-stations [stations]
       (conj
-        [:div {:class "rm-station-heading"} "Radio Stations"]
-        (map #(render-station %) stations)
-        (top-100)))
-
+        [:div {:class "rm-station-heading"} "Checkout our Spotify lists!!"]
+        (map #(render-station %) stations)))
