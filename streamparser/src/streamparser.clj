@@ -1,7 +1,9 @@
 (ns streamparser
   (:require [environ.core :refer [env]]
             [me.raynes.conch :as c]
-            [me.raynes.conch.low-level :as sh])
+            [me.raynes.conch.low-level :as sh]
+            [clojure.core.async :refer [go-loop <! timeout thread]])
+  (:import  [java.util Iterator])
   (:import  [com.gracenote.gnsdk
              GnManager
              GnLicenseInputMode
@@ -11,6 +13,7 @@
              GnDescriptor
              GnUser
              IGnUserStore
+             GnLookupData
              GnLookupMode
              GnString
              IGnAudioSource
@@ -21,7 +24,8 @@
              GnMusicIdStreamProcessingStatus
              GnStatus
              GnMusicIdStream
-             GnMusicIdStreamPreset])
+             GnMusicIdStreamPreset
+             GnAlbumIterator])
   (:gen-class))
 
 ;; TODO
@@ -38,7 +42,7 @@
 (def gnsdk-lib (env :gnsdk-lib))
 
 (defn ffmpeg-stream [url]
-  (sh/proc "ffmpeg" "-i" url "-f" "wav" "-ar" "44100" "-t" "7" "pipe:"))
+  (sh/proc "ffmpeg" "-i" url "-f" "wav" "-ar" "44100" "-t" "3600" "pipe:"))
 
 (deftype AudioSource [ffmpeg-process]
   IGnAudioSource
@@ -55,22 +59,57 @@
         (.put data-buffer bytes 0 read))
       (max read 0))))
 
+(defn album-iterator->iterator-seq [albums]
+  (iterator-seq
+   (reify java.util.Iterator
+     (hasNext [_]
+       (.hasNext albums))
+     (next [_]
+       (.next albums))
+     (remove [_]))))
+
+(defn display [album]
+  (let [artist (.. album (artist) (name) (display))
+        track  (.. album (trackMatched) (title) (display))]
+    [artist track]))
+
+(defn handle-result [result]
+  (let [albums (-> (.. result (albums) (getIterator))
+                   (album-iterator->iterator-seq))]
+    (-> (map display albums)
+        doall
+        println)))
+
 (defn make-logger [] (reify
-                    IGnMusicIdStreamEvents
-                    (musicIdStreamProcessingStatusEvent [_ _ _])
-                    (musicIdStreamIdentifyingStatusEvent [_ _ _])
-                    (musicIdStreamAlbumResult [_ result _]
-                      (println result))
-                    (musicIdStreamIdentifyCompletedWithError [_ _])
-                       (statusEvent [_ _ _ _ _ _])))
+                       IGnMusicIdStreamEvents
+                       (musicIdStreamProcessingStatusEvent [_ status _]
+                         ;; (println status)
+                         )
+                       (musicIdStreamIdentifyingStatusEvent [_ status _]
+                         ;; (println status)
+                         )
+                       (musicIdStreamAlbumResult [_ result _]
+                         (handle-result result))
+                       (musicIdStreamIdentifyCompletedWithError [_ error]
+                         ;; (println error)
+                         )
+                       (statusEvent [_ _ percent _ _ _]
+                         ;; (println percent)
+                         )))
 
 (defn stream-music [uri user]
   (let [mids (GnMusicIdStream. user GnMusicIdStreamPreset/kPresetRadio (make-logger))]
     (.. mids (options) (resultSingle true))
+    (.. mids (options) (lookupData GnLookupData/kLookupDataExternalIds true))
+    (.. mids (options) (lookupData GnLookupData/kLookupDataGlobalIds true))
     (doto mids
-      (.automaticIdentifcation true)
-      (.audioProcessStart (AudioSource. (ffmpeg-stream uri)))
-      (.identifyAlbum))))
+      (.automaticIdentifcation true))
+    (go-loop []
+      (<! (timeout 7000))
+      ;; (println "call identify")
+      (.identifyAlbum mids)
+      (recur))
+    (.audioProcessStart mids (AudioSource. (ffmpeg-stream uri)))))
 
 (defn load-locale [^com.gracenote.gnsdk.GnUser user]
   (let [locale (com.gracenote.gnsdk.GnLocale.

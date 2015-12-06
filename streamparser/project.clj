@@ -10,8 +10,9 @@
                  [environ "1.0.1"]
                  [boot-environ "1.0.1"]
                  [gnsdk "3.07.7"]
-                 [gnsdk/gnsdk-helpers "3.07.7"]]
+                 [gnsdk/gnsdk-helpers "3.07.7"]
 
+                 [org.clojure/core.async "0.2.374"]]
                  ;--------------------------------
 
   :jvm-opts     ["-Xmx4G"
