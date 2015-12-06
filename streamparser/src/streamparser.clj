@@ -25,7 +25,8 @@
              GnStatus
              GnMusicIdStream
              GnMusicIdStreamPreset
-             GnAlbumIterator])
+             GnAlbumIterator
+             GnMusicIdStreamIdentifyingStatus])
   (:gen-class))
 
 ;; TODO
@@ -93,9 +94,9 @@
                        (musicIdStreamProcessingStatusEvent [_ status _]
                          ;; (println status)
                          )
-                       (musicIdStreamIdentifyingStatusEvent [_ status _]
-                         ;; (println status)
-                         )
+                       (musicIdStreamIdentifyingStatusEvent [_ status c]
+                         (if (= status GnMusicIdStreamIdentifyingStatus/kStatusIdentifyingEnded)
+                           (.setCancel c true)))
                        (musicIdStreamAlbumResult [_ result _]
                          (handle-result result))
                        (musicIdStreamIdentifyCompletedWithError [_ error]
