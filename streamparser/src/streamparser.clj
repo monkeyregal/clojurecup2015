@@ -109,7 +109,7 @@
 (defn convert-result [album]
   (let [artist-display (.. album (artist) (name) (display))
         track-matched  (.. album (trackMatched))
-        track-display  (.. track-matched (title) (display))
+        track-display  (.. track-matched (title) (mainTitle))
         track-duration (.. track-matched (duration))
         match-position (.. track-matched (matchPosition))
         match-duration (.. track-matched (matchDuration))
