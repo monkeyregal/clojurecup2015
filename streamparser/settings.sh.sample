@@ -4,3 +4,8 @@ export GNSDK_ARCH=""
 export GNSDK_CLIENT_ID=""
 export GNSDK_CLIENT_TAG=""
 export GNSDK_CLIENT_LICENSE=""
+
+export SPOTIFY_CLIENT_ID=""
+export SPOTIFY_CLIENT_SECRET=""
+export SPOTIFY_REDIRECT_URI="http://nonexistent/cb"
+export SPOTIFY_REFRESH_TOKEN_FILE="data/spotify-refresh-token"

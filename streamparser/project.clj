@@ -2,7 +2,7 @@
 (defproject streamparser "0.1.0-SNAPSHOT"
   ;:exclusions   [[org.clojure/clojure]]
   :dependencies [;-----------------------------
-                 [org.clojure/clojure "1.8.0-RC3"]
+                 [org.clojure/clojure "1.7.0"]
 
                  [me.raynes/conch "0.8.0"]
                  [byte-streams "0.2.0"]
@@ -13,8 +13,11 @@
 
                  [org.clojure/tools.logging "0.3.1"]
 
-                 [org.clojure/core.async "0.2.374"]]
-                 ;--------------------------------
+                 [org.clojure/core.async "0.2.374"]
+
+                 [clj-time "0.11.0"]
+                 [cheshire "5.5.0"]
+                 [clj-http "2.0.0"]]
 
   :jvm-opts     ["-Xmx4G"
                  "-XX:MaxPermSize=256m"

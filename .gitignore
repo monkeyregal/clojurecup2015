@@ -15,3 +15,4 @@ pom.xml
 /playlist-viewer/out
 /playlist-viewer/target
 *.iml
+.lein*
