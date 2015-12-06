@@ -1,6 +1,7 @@
 pom.xml
 *jar
 *target/
+streamparser/data
 /lib/
 /classes/
 /out/
