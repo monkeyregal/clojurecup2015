@@ -18,7 +18,7 @@
 
 (defn navbar []
   [:nav {:class "navbar navbar-default"}
-   [:a {:class "navbar-brand" :href "#" } "Regal Monkey" ]
+   [:a {:class "navbar-brand" :href "#" } "No DJ's plz" ]
    ;[:button {:class "btn btn-info btn-navbar"
    ;          :on-click #(add-stream)
    ;          } "+ Stream"]
@@ -85,4 +85,3 @@
      [:div {:class "row"}
       [:div {:id "left" :class "col-md-9"} (render-playlist)]
       [:div {:id "right" :class "col-md-3"} (render-radio-stations @radio-stations)]]])
-
