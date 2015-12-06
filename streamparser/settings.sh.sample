@@ -1,3 +1,6 @@
+#ARCHS: android_armeabi android_armeabi-v7a android_x86 linux_arm-32 linux_armhf-32 linux_x86-32 linux_x86-64 mac_x86-32 mac_x86-64 win_x86-32 win_x86-64
+export GNSDK_ARCH=""
+
 export GNSDK_CLIENT_ID=""
 export GNSDK_CLIENT_TAG=""
 read -d '' GNSDK_CLIENT_LICENSE <<EOF
