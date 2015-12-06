@@ -3,5 +3,4 @@ export GNSDK_ARCH=""
 
 export GNSDK_CLIENT_ID=""
 export GNSDK_CLIENT_TAG=""
-read -d '' GNSDK_CLIENT_LICENSE <<EOF
-EOF
+export GNSDK_CLIENT_LICENSE=""
