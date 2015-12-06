@@ -34,5 +34,6 @@
                   ["shell" "sh" "-c" "mv target/*.jar jars/"]]
 
   :java-source-paths ["src-java"]
-  :global-vars {*warn-on-reflection* true}
-  :repl-options {:port 8081})
+  ;:global-vars {*warn-on-reflection* true}
+  :repl-options {:port 8081}
+  :profiles {:uberjar {:aot :all}})
