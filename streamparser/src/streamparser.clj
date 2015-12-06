@@ -2,7 +2,7 @@
   (:require [environ.core :refer [env]]
             [me.raynes.conch :as c]
             [me.raynes.conch.low-level :as sh]
-            [clojure.core.async :refer [go-loop <! timeout thread]])
+            [clojure.core.async :refer [go go-loop <! <!! timeout thread]])
   (:import  [java.util Iterator])
   (:import  [com.gracenote.gnsdk
              GnManager
@@ -31,7 +31,6 @@
 
 ;; TODO
 ;; Store results
-;; Use GnLookupData to retrieve more data
 ;; Add cache
 ;; Loop over stream
 
@@ -43,7 +42,10 @@
 (def gnsdk-lib (env :gnsdk-lib))
 
 (defn ffmpeg-stream [url]
-  (sh/proc "ffmpeg" "-i" url "-f" "wav" "-ar" "44100" "-t" "3600" "pipe:"))
+  (sh/proc "ffmpeg" "-i" url "-f" "wav" "-ar" "44100" "-t" "18000" "pipe:"))
+
+(defprotocol BytesToGo
+  (set-togo [_ amount]))
 
 (deftype AudioSource [ffmpeg-process]
   IGnAudioSource
@@ -121,20 +123,23 @@
                          )))
 
 (defn stream-music [uri user]
-  (let [mids (GnMusicIdStream. user GnMusicIdStreamPreset/kPresetRadio (make-logger))]
-    (.. mids (options) (resultSingle true))
-    (.. mids (options) (lookupData GnLookupData/kLookupDataExternalIds true))
-    (.. mids (options) (lookupData GnLookupData/kLookupDataGlobalIds true))
-    (doto mids
-      (.automaticIdentifcation false))
-    (go-loop []
-      (let [nt @next-timeout]
-        (swap! next-timeout (fn [_] nil))
-        (<! (timeout (if (= nil nt) 30000 nt))))
-      (println "call identify")
-      (.identifyAlbum mids)
-      (recur))
-    (.audioProcessStart mids (AudioSource. (ffmpeg-stream uri)))))
+  (let [audio-source (AudioSource. (ffmpeg-stream uri))
+        logger (make-logger)
+        c (go-loop []
+            (let [mids (GnMusicIdStream. user GnMusicIdStreamPreset/kPresetRadio logger)
+                  nt @next-timeout]
+              (.. mids (options) (resultSingle true))
+              (.. mids (options) (lookupData GnLookupData/kLookupDataExternalIds true))
+              (.. mids (options) (lookupData GnLookupData/kLookupDataGlobalIds true))
+              (doto mids
+                (.automaticIdentifcation false))
+              (swap! next-timeout (fn [_] nil))
+              (go (.audioProcessStart mids audio-source))
+              (println "call identify")
+              (.identifyAlbum mids)
+              (<! (timeout (if (= nil nt) 30000 nt))))
+            (recur))]
+    (<!! c)))
 
 (defn load-locale [^com.gracenote.gnsdk.GnUser user]
   (let [locale (com.gracenote.gnsdk.GnLocale.
