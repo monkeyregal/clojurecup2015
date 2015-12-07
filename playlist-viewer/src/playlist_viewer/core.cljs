@@ -24,7 +24,7 @@
 (go-loop []
   (let [response (<! (http/get "http://nodejsplz.monkeyregal.com/last"))
         decoded  (util/json-decode response)]
-    (swap! app-state (fn [prev] (update-in prev [:playlists 0 :tracks] decoded)))
+    (swap! app-state (fn [prev] (update-in prev [:playlists 0 :tracks] (:result decoded))))
     (<! (timeout 15000)))
   (recur))
 

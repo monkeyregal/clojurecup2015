@@ -10,7 +10,7 @@
 (def last-100-songs (atom '()))
 
 (defn render-last-tracks [request]
-  (-> (r/response (deref last-100-songs))
+  (-> (r/response {:result (deref last-100-songs)})
       (r/content-type "application/json; charset=utf-8")))
 
 (defroutes app-routes
