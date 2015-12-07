@@ -53,7 +53,7 @@
 (def song-channel (chan (sliding-buffer 1000)))
 
 (defn ffmpeg-stream [url]
-  (log/warn "start-stream" url)
+  (log/info "start-stream" url)
   (assoc
    (sh/proc "ffmpeg" "-i" url "-f" "wav" "-ar" "44100" "-shortest" "pipe:")
    :url url))
@@ -74,7 +74,7 @@
                     (if (> read 0)
                       (recur new-total)
                       (do (sh/destroy ffmpeg-process)
-                          (log/warn "stream-closed" (:url ffmpeg-process))))))))
+                          (log/info "stream-closed" (:url ffmpeg-process))))))))
             (log/debug "delivered 60 seconds for: " (:url ffmpeg-process))
             (when (< 0 (.available (:out ffmpeg-process)))
               (recur)))))
@@ -86,8 +86,11 @@
   (let [lookup (:stream-id msg)
         last   (lookup @last-songs)
         song   (select-keys msg [:artist :track])]
-    (when (not= song last)
-      (swap! last-songs (fn [prev] (assoc prev lookup song))))))
+    (log/debug "Emit?" song)
+    (if (not= song last)
+      (do (log/debug "Emit!" song)
+          (swap! last-songs (fn [prev] (assoc prev lookup song))))
+      (log/debug "Skip" song))))
 
 (def playlist {:3fm "0Dk9ouTKwXzGpqkjVavDRl"
                :sky "23xdXOfVgdQlDDc895COGM"
@@ -98,13 +101,24 @@
 (defn handle-song-channel [c]
   (thread
     (loop []
-      (let [msg (<!! c)]
+      (let [msg (<!! c)
+            song (select-keys msg [:stream-id :artist :track])]
         (when (emit-song?! msg)
+          (log/info "Handling" song)
           (try
+            (log/debug "last 100" song)
             (swap! server/last-100-songs (fn [prev] (-> prev (conj msg) (#(take 100 %)))))
+
+            (log/debug "add stream song" song)
             (spotify/add-song owner (playlist (:stream-id msg)) (:artist msg) (:track msg))
+
+            (log/debug "trim stream" (:stream-id song))
             (spotify/trim-playlist owner (playlist (:stream-id msg)) 250)
+
+            (log/debug "add all song" song)
             (spotify/add-song owner (playlist :all) (:artist msg) (:track msg))
+
+            (log/debug "trim all")
             (spotify/trim-playlist owner (playlist :all) 250)
             (catch Exception e (log/error e))))
         (recur)))))
@@ -169,7 +183,7 @@
                    doall
                    first)
         result (if result (assoc result :stream-id stream-id) result)]
-    (log/warn result)
+    (log/debug "Handling" result "for" stream-id)
     (when result
       (>!! song-channel result))))
 
@@ -263,8 +277,14 @@
 
 (defn merge-config [])
 
+(Thread/setDefaultUncaughtExceptionHandler
+ (reify Thread$UncaughtExceptionHandler
+   (uncaughtException [_ thread throwable]
+     (log/error throwable "Stacktrace:"
+                (print-str (clojure.stacktrace/print-stack-trace throwable))))))
+
 (defn -main [& args]
-  (log/error "java.library.path=" (System/getProperty "java.library.path"))
+  (log/debug "java.library.path=" (System/getProperty "java.library.path"))
   (clojure.lang.RT/loadLibrary "gnsdk_java_marshal")
   (GnManager. gnsdk-lib client-license GnLicenseInputMode/kLicenseInputModeString)
   (initialize-local-database)

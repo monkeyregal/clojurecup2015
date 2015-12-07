@@ -17,6 +17,7 @@
                  [gnsdk/gnsdk-helpers "3.07.7"]
 
                  [org.clojure/tools.logging "0.3.1"]
+                 [log4j/log4j "1.2.17"]
 
                  [org.clojure/core.async "0.2.374"]
 
@@ -42,7 +43,7 @@
   :release-tasks [["jar"]
                   ["libdir"]
                   ["shell" "sh" "-c" "mv target/*.jar jars/"]]
-
+  :resource-paths ["resources"]
   :java-source-paths ["src-java"]
   ;:global-vars {*warn-on-reflection* true}
   :repl-options {:port 8081}
