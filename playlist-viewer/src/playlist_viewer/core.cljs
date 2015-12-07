@@ -21,14 +21,15 @@
 (reagent/render-component [container]
                           (. js/document (getElementById "app")))
 
+(go-loop []
+  (let [response (<! (http/get "http://nodejsplz.monkeyregal.com/last"))
+        decoded  (util/json-decode response)]
+    (swap! app-state (fn [prev] (update-in prev [:playlists 0 :tracks] decoded)))
+    (<! (timeout 15000)))
+  (recur))
 
 (defn on-js-reload []
   ;; optionally touch your app-state to force rerendering depending on
   ;; your application
   ;; (swap! app-state update-in [:__figwheel_counter] inc)
-  (go-loop []
-    (let [response (<! (http/get "http://nodejsplz.monkeyregal.com/last"))
-          decoded  (util/json-decode response)]
-      (swap! app-state (fn [prev] (update-in prev [:playlists 0 :tracks] decoded)))
-      (<! (timeout 15000)))
-    (recur)))
+  )
