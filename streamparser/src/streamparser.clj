@@ -55,7 +55,7 @@
 (defn ffmpeg-stream [url]
   (log/warn "start-stream" url)
   (assoc
-   (sh/proc "ffmpeg" "-i" url "-f" "wav" "-ar" "44100" "pipe:")
+   (sh/proc "ffmpeg" "-i" url "-f" "wav" "-ar" "44100" "-shortest" "pipe:")
    :url url))
 
 (defn push-onto-stream [c logger ffmpeg-process]
