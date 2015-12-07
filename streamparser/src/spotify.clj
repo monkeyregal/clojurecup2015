@@ -51,7 +51,7 @@
        (get-token)))))
 
 
-(def forbidden-words ["featuring" "feat" "(" ")" "." ","])
+(def forbidden-words ["featuring" "feat" "(" ")" "." "," "&"])
 
 (defn sanitize [name]
   (let [pattern (->> forbidden-words (map #(java.util.regex.Pattern/quote %))
