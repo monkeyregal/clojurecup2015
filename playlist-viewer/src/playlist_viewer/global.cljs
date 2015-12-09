@@ -20,14 +20,8 @@
                      {:current-playlist 0
                       :playlists
                         [ {
-                           :name "All"
+                           :name "NL"
                            :tracks [
                                     ]
-                           }
-                         {:name "Second Playlist"
-                          :created "2015-12-06"
-                          :tracks []}
-                         {:name "Third Playlist"
-                          :created "2015-12-06"
-                          :tracks []}
+                           } 
                          ]}))

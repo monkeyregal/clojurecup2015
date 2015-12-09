@@ -23,7 +23,7 @@
 
 (go-loop []
   (let [response (<! (http/get "http://nodejsplz.monkeyregal.com/last"))]
-    (swap! app-state (fn [prev] (update-in prev [:playlists 0 :tracks] (fn [_] (:result response)))))
+    (swap! app-state (fn [prev] (update-in prev [:playlists 0 :tracks] (fn [_] (get-in response [:body :result])))))
     (<! (timeout 15000)))
   (recur))
 
