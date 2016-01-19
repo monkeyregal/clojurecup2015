@@ -204,11 +204,16 @@
                             ;; (println percent)
                          )))
 
-(defn stream-music1 [c user]
+(defn- get-index []
+  (let [now (java.util.Calendar/getInstance)
+        index (mod (.get now java.util.Calendar/HOUR_OF_DAY) 4)]
+    index))
+
+(defn stream-music1 [c users]
   (thread (try (loop []
                  (let [msg (<!! c)
                        logger (:logger msg)
-                       mids (GnMusicIdStream. user GnMusicIdStreamPreset/kPresetRadio logger)]
+                       mids (GnMusicIdStream. (nth users (get-index)) GnMusicIdStreamPreset/kPresetRadio logger)]
                    (.. mids (options) (resultSingle true))
                    (.. mids (options) (lookupData GnLookupData/kLookupDataExternalIds true))
                    (.. mids (options) (lookupData GnLookupData/kLookupDataGlobalIds true))
@@ -246,13 +251,13 @@
                 com.gracenote.gnsdk.GnDescriptor/kDescriptorDefault
                 user)]))
 
-(defn user-store [] (reify com.gracenote.gnsdk.IGnUserStore
+(defn user-store [id] (reify com.gracenote.gnsdk.IGnUserStore
                   (loadSerializedUser [_ clientId]
                     (try
-                      (GnString. ^String (slurp (str "data/" clientId)))
+                      (GnString. ^String (slurp (str "data/" clientId "-" id)))
                       (catch java.io.FileNotFoundException e nil)))
                   (storeSerializedUser [_ clientId serializedUser]
-                    (spit (str "data/" clientId) serializedUser)
+                    (spit (str "data/" clientId "-" id) serializedUser)
                     true)))
 
 (defn user! [user-store] (let [user (com.gracenote.gnsdk.GnUser. user-store client-id client-tag VERSION)]
@@ -288,7 +293,7 @@
   (clojure.lang.RT/loadLibrary "gnsdk_java_marshal")
   (GnManager. gnsdk-lib client-license GnLicenseInputMode/kLicenseInputModeString)
   (initialize-local-database)
-  (let [user (user! (user-store))]
+  (let [users (into [] (map (fn [id] (user! (user-store id))) (range 0 4)))]
     (server/run)
     (handle-song-channel song-channel)
     (go-loop []
@@ -297,4 +302,4 @@
     (go-loop []
       (<! (push-onto-stream seven-seconds-chan (make-logger :3fm) (ffmpeg-stream "http://icecast.omroep.nl/3fm-bb-mp3")))
       (recur))
-    (log/spyf :error "exited: %s" (<!! (stream-music1 seven-seconds-chan user)))))
+    (log/spyf :error "exited: %s" (<!! (stream-music1 seven-seconds-chan users)))))
